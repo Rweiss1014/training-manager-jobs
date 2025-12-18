@@ -32,12 +32,12 @@ class Job(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(500), nullable=False)
     company = Column(String(500))
+    salary = Column(String(200))  # Salary range if listed
     location = Column(String(500))
     date_posted = Column(Date)
     job_url = Column(String(2000), unique=True, nullable=False)
     description = Column(Text)
     level = Column(String(50))  # "Management+" or "Individual Contributor"
-    category = Column(String(100))  # One of 5 categories
     created_at = Column(DateTime, default=datetime.utcnow)
 
     def __repr__(self):

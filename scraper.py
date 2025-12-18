@@ -136,30 +136,53 @@ def get_level(title: str) -> str:
     return "Individual Contributor"
 
 
-def get_category(title: str) -> str:
+def get_salary(row) -> str:
     """
-    Categorize job based on title keywords.
-    Returns one of 5 categories.
+    Extract and format salary from job data.
+    Returns formatted salary string or None if not listed.
     """
-    if not title:
-        return "General L&D"
+    min_amt = row.get('min_amount')
+    max_amt = row.get('max_amount')
+    interval = row.get('interval')
+    currency = row.get('currency', 'USD')
 
-    title_lower = title.lower()
+    # Check if we have salary data
+    if pd.isna(min_amt) and pd.isna(max_amt):
+        return None
 
-    # Check categories in order of specificity
-    if any(k in title_lower for k in ["instructional", "curriculum", "elearning", "storyline"]):
-        return "Instructional Design"
+    # Format the salary
+    def format_amount(amt):
+        if pd.isna(amt):
+            return None
+        amt = float(amt)
+        if amt >= 1000:
+            return f"${amt/1000:.0f}K"
+        return f"${amt:.0f}"
 
-    if any(k in title_lower for k in ["trainer", "facilitation", "onboarding"]):
-        return "Training Delivery"
+    min_str = format_amount(min_amt)
+    max_str = format_amount(max_amt)
 
-    if "enablement" in title_lower:
-        return "Enablement"
+    # Build salary string
+    if min_str and max_str:
+        salary = f"{min_str} - {max_str}"
+    elif min_str:
+        salary = f"{min_str}+"
+    elif max_str:
+        salary = f"Up to {max_str}"
+    else:
+        return None
 
-    if any(k in title_lower for k in ["analyst", "lms", "ops", "admin"]):
-        return "Ops & Analytics"
+    # Add interval if available
+    if interval and not pd.isna(interval):
+        interval_str = str(interval).lower()
+        if 'year' in interval_str:
+            salary += "/yr"
+        elif 'hour' in interval_str:
+            salary += "/hr"
+        elif 'month' in interval_str:
+            salary += "/mo"
 
-    return "General L&D"
+    return salary
 
 
 # =============================================================================
@@ -252,12 +275,12 @@ def scrape_and_store():
                         job = Job(
                             title=str(title)[:500] if title else None,
                             company=str(row.get('company', ''))[:500] if row.get('company') else None,
+                            salary=get_salary(row),
                             location=str(row.get('location', ''))[:500] if row.get('location') else None,
                             date_posted=date_posted,
                             job_url=str(job_url)[:2000],
                             description=str(description) if description else None,
                             level=get_level(title),
-                            category=get_category(title),
                             created_at=datetime.utcnow()
                         )
 

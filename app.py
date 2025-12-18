@@ -19,13 +19,6 @@ st.set_page_config(
 
 # Constants
 LEVELS = ["Management+", "Individual Contributor"]
-CATEGORIES = [
-    "Instructional Design",
-    "Training Delivery",
-    "Enablement",
-    "Ops & Analytics",
-    "General L&D"
-]
 
 # Broad location terms that should always be included when filtering
 BROAD_LOCATIONS = ["united states", "usa", "remote", "nationwide", "anywhere"]
@@ -45,12 +38,12 @@ def load_jobs():
                 'id': job.id,
                 'title': job.title,
                 'company': job.company,
+                'salary': job.salary,
                 'location': job.location,
                 'date_posted': job.date_posted,
                 'job_url': job.job_url,
                 'description': job.description,
                 'level': job.level,
-                'category': job.category,
                 'created_at': job.created_at
             } for job in jobs]
 
@@ -141,14 +134,6 @@ def main():
         placeholder="All levels"
     )
 
-    # Category filter
-    selected_categories = st.sidebar.multiselect(
-        "Category",
-        options=CATEGORIES,
-        default=[],
-        placeholder="All categories"
-    )
-
     # Location filter
     unique_locations = sorted(df['location'].dropna().unique().tolist())
     selected_locations = st.sidebar.multiselect(
@@ -171,10 +156,6 @@ def main():
     # Level filter
     if selected_levels:
         filtered_df = filtered_df[filtered_df['level'].isin(selected_levels)]
-
-    # Category filter
-    if selected_categories:
-        filtered_df = filtered_df[filtered_df['category'].isin(selected_categories)]
 
     # Location filter (with smart broad location logic)
     if selected_locations:
@@ -229,7 +210,7 @@ def main():
         return
 
     # Prepare display dataframe
-    display_columns = ['title', 'company', 'location', 'level', 'category', 'job_url']
+    display_columns = ['title', 'company', 'salary', 'location', 'level', 'job_url']
     available_columns = [col for col in display_columns if col in filtered_df.columns]
     display_df = filtered_df[available_columns].copy()
 
@@ -237,9 +218,9 @@ def main():
     column_labels = {
         'title': 'Job Title',
         'company': 'Company',
+        'salary': 'Salary',
         'location': 'Location',
         'level': 'Level',
-        'category': 'Category',
         'job_url': 'Apply'
     }
     display_df = display_df.rename(columns=column_labels)
@@ -254,9 +235,9 @@ def main():
     column_config = {
         "Job Title": st.column_config.TextColumn("Job Title", width="large"),
         "Company": st.column_config.TextColumn("Company", width="medium"),
+        "Salary": st.column_config.TextColumn("Salary", width="small"),
         "Location": st.column_config.TextColumn("Location", width="medium"),
         "Level": st.column_config.TextColumn("Level", width="small"),
-        "Category": st.column_config.TextColumn("Category", width="medium"),
         "Apply": st.column_config.LinkColumn("Apply", display_text="Apply 🚀", width="small")
     }
 
@@ -275,16 +256,18 @@ def main():
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown("**Jobs by Category:**")
-            if 'category' in filtered_df.columns:
-                cat_counts = filtered_df['category'].value_counts()
-                st.dataframe(cat_counts, use_container_width=True)
-
-        with col2:
             st.markdown("**Jobs by Level:**")
             if 'level' in filtered_df.columns:
                 level_counts = filtered_df['level'].value_counts()
                 st.dataframe(level_counts, use_container_width=True)
+
+        with col2:
+            st.markdown("**Jobs with Salary Listed:**")
+            if 'salary' in filtered_df.columns:
+                has_salary = filtered_df['salary'].notna().sum()
+                no_salary = filtered_df['salary'].isna().sum()
+                st.metric("With Salary", has_salary)
+                st.metric("No Salary", no_salary)
 
         st.markdown("**Top Companies:**")
         company_counts = filtered_df['company'].value_counts().head(10)
