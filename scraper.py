@@ -34,6 +34,50 @@ RESULTS_WANTED = 20  # Per search term/location combo
 
 
 # =============================================================================
+# L&D ROLE VALIDATOR - Filters out non-L&D jobs
+# =============================================================================
+
+def is_valid_ld_role(title: str) -> bool:
+    """
+    Check if a job title is actually an L&D role.
+    Returns True only if the title contains L&D-specific keywords.
+    This filters out irrelevant results like 'Software Developer', 'Sales Rep', etc.
+    """
+    if not title:
+        return False
+
+    title_lower = title.lower()
+
+    # Must contain at least one of these L&D-specific keywords
+    ld_keywords = [
+        # Training & Learning
+        "training", "trainer", "learning", "l&d",
+        # Instructional Design
+        "instructional", "curriculum", "elearning", "e-learning", "courseware",
+        # Enablement
+        "enablement",
+        # Development (but specifically L&D context)
+        "talent development", "organizational development", "professional development",
+        "leadership development", "employee development",
+        # Facilitation & Coaching
+        "facilitator", "facilitation", "coach", "coaching",
+        # Onboarding
+        "onboarding",
+        # LMS & Learning Tech
+        "lms", "learning management",
+        # Education (corporate context)
+        "corporate education", "education manager", "education director",
+    ]
+
+    # Check if any L&D keyword is in the title
+    for keyword in ld_keywords:
+        if keyword in title_lower:
+            return True
+
+    return False
+
+
+# =============================================================================
 # ENABLEMENT BOUNCER
 # =============================================================================
 
@@ -140,6 +184,7 @@ def scrape_and_store():
     total_found = 0
     total_new = 0
     total_skipped_duplicate = 0
+    total_skipped_not_ld = 0
     total_skipped_bouncer = 0
 
     current_search = 0
@@ -182,6 +227,11 @@ def scrape_and_store():
                         # Check for duplicates
                         if job_exists(session, job_url):
                             total_skipped_duplicate += 1
+                            continue
+
+                        # STRICT L&D FILTER - Must be an actual L&D role
+                        if not is_valid_ld_role(title):
+                            total_skipped_not_ld += 1
                             continue
 
                         # Apply Enablement Bouncer if "enablement" in title
@@ -232,6 +282,7 @@ def scrape_and_store():
     print(f"Total jobs found:           {total_found}")
     print(f"New jobs added to DB:       {total_new}")
     print(f"Skipped (duplicate):        {total_skipped_duplicate}")
+    print(f"Skipped (not L&D role):     {total_skipped_not_ld}")
     print(f"Skipped (Enablement filter):{total_skipped_bouncer}")
     print("=" * 60)
 
