@@ -226,9 +226,13 @@ def scrape_and_store():
                 print(f"[{current_search}/{total_searches}] '{search_term}' in '{location}'...")
 
                 try:
+                    # Build Google-specific search term
+                    google_search = f"{search_term} jobs in {location}"
+
                     jobs_df = scrape_jobs(
-                        site_name=["indeed", "linkedin", "glassdoor"],
+                        site_name=["indeed", "linkedin", "glassdoor", "google"],
                         search_term=search_term,
+                        google_search_term=google_search,
                         location=location,
                         hours_old=HOURS_OLD,
                         results_wanted=RESULTS_WANTED,
