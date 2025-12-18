@@ -23,9 +23,56 @@ SEARCH_TERMS = [
 
 LOCATIONS = [
     "Remote",
+    # Florida
     "Orlando, FL",
     "Maitland, FL",
-    "Altamonte Springs, FL"
+    "Altamonte Springs, FL",
+    "Miami, FL",
+    "Tampa, FL",
+    "Jacksonville, FL",
+    # Northeast
+    "New York, NY",
+    "Boston, MA",
+    "Philadelphia, PA",
+    "Washington, DC",
+    "Baltimore, MD",
+    "Pittsburgh, PA",
+    # Southeast
+    "Atlanta, GA",
+    "Charlotte, NC",
+    "Nashville, TN",
+    "Raleigh, NC",
+    "Richmond, VA",
+    "New Orleans, LA",
+    # Midwest
+    "Chicago, IL",
+    "Detroit, MI",
+    "Minneapolis, MN",
+    "Cleveland, OH",
+    "Columbus, OH",
+    "Indianapolis, IN",
+    "Milwaukee, WI",
+    "Kansas City, MO",
+    "St. Louis, MO",
+    # Texas
+    "Houston, TX",
+    "Dallas, TX",
+    "Austin, TX",
+    "San Antonio, TX",
+    # Mountain West
+    "Denver, CO",
+    "Phoenix, AZ",
+    "Salt Lake City, UT",
+    "Las Vegas, NV",
+    "Albuquerque, NM",
+    # West Coast
+    "Los Angeles, CA",
+    "San Francisco, CA",
+    "San Diego, CA",
+    "San Jose, CA",
+    "Sacramento, CA",
+    "Seattle, WA",
+    "Portland, OR",
 ]
 
 # Scraping parameters
@@ -221,7 +268,7 @@ def scrape_and_store():
 
                 try:
                     jobs_df = scrape_jobs(
-                        site_name=["indeed", "linkedin", "zip_recruiter"],
+                        site_name=["indeed", "linkedin"],
                         search_term=search_term,
                         location=location,
                         hours_old=HOURS_OLD,
