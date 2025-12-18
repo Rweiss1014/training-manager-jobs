@@ -3,6 +3,7 @@ L&D Job Scraper with Smart Tagging and Enablement Bouncer.
 Scrapes job listings and stores them in PostgreSQL.
 """
 
+import os
 import time
 from datetime import datetime
 
@@ -10,6 +11,11 @@ from jobspy import scrape_jobs
 import pandas as pd
 
 from database import init_db, get_session, Job, job_exists
+
+
+# Proxy configuration (ScraperAPI)
+SCRAPER_API_KEY = os.environ.get("SCRAPER_API_KEY", "03c3ae405a9edb8e489bd6450c634207")
+PROXY_URL = f"http://scraperapi:{SCRAPER_API_KEY}@proxy-server.scraperapi.com:8001"
 
 
 # Search configuration
@@ -226,7 +232,8 @@ def scrape_and_store():
                         location=location,
                         hours_old=HOURS_OLD,
                         results_wanted=RESULTS_WANTED,
-                        country_indeed='USA'
+                        country_indeed='USA',
+                        proxy=PROXY_URL
                     )
 
                     if jobs_df is None or jobs_df.empty:
