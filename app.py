@@ -1,140 +1,184 @@
 """
-Training Manager Job Scraper Dashboard
-A Streamlit frontend for browsing and filtering job leads.
+L&D Job Board Dashboard
+A Streamlit frontend for browsing and filtering L&D job listings from PostgreSQL.
 """
 
 import streamlit as st
 import pandas as pd
-from pathlib import Path
+from datetime import date
+
+from database import get_session, Job
 
 # Page configuration - MUST be first Streamlit command
 st.set_page_config(
-    page_title="Training Manager Jobs Dashboard",
+    page_title="L&D Job Board",
     page_icon="📋",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Constants for scoring
-TOPIC_WORDS = ['training', 'learning', 'l&d', 'development', 'enablement', 'instructional', 'education']
-LEVEL_WORDS = ['manager', 'director', 'head', 'lead', 'principal', 'vp', 'vice president', 'senior']
+# Constants
+LEVELS = ["Management+", "Individual Contributor"]
+CATEGORIES = [
+    "Instructional Design",
+    "Training Delivery",
+    "Enablement",
+    "Ops & Analytics",
+    "General L&D"
+]
+
+# Broad location terms that should always be included when filtering
+BROAD_LOCATIONS = ["united states", "usa", "remote", "nationwide", "anywhere"]
 
 
-def calculate_match_score(title: str) -> int:
-    """
-    Calculate a match score (0-100) based on topic and level word matches.
-    """
-    if pd.isna(title) or not title:
-        return 0
+@st.cache_data(ttl=300)  # Cache for 5 minutes
+def load_jobs():
+    """Load all jobs from the database."""
+    try:
+        with get_session() as session:
+            jobs = session.query(Job).all()
 
-    title_lower = title.lower()
+            if not jobs:
+                return pd.DataFrame()
 
-    # Count topic word matches (max 3 points)
-    topic_matches = sum(1 for word in TOPIC_WORDS if word in title_lower)
-    topic_score = min(topic_matches, 3) * 20  # 0, 20, 40, or 60
+            data = [{
+                'id': job.id,
+                'title': job.title,
+                'company': job.company,
+                'location': job.location,
+                'date_posted': job.date_posted,
+                'job_url': job.job_url,
+                'description': job.description,
+                'level': job.level,
+                'category': job.category,
+                'created_at': job.created_at
+            } for job in jobs]
 
-    # Count level word matches (max 2 points)
-    level_matches = sum(1 for word in LEVEL_WORDS if word in title_lower)
-    level_score = min(level_matches, 2) * 20  # 0, 20, or 40
-
-    return min(topic_score + level_score, 100)
-
-
-@st.cache_data
-def load_data():
-    """Load and preprocess the job data."""
-    csv_path = Path("broad_training_leads.csv")
-
-    if not csv_path.exists():
-        return None
-
-    df = pd.read_csv(csv_path)
-
-    # Calculate match scores
-    df['match_score'] = df['title'].apply(calculate_match_score)
-
-    # Clean up location data
-    df['location'] = df['location'].fillna('Not Specified')
-
-    # Ensure job_url exists
-    if 'job_url' not in df.columns:
-        df['job_url'] = ''
-
-    return df
+            return pd.DataFrame(data)
+    except Exception as e:
+        st.error(f"Database connection error: {e}")
+        return pd.DataFrame()
 
 
-def categorize_location(location: str) -> str:
-    """Categorize location as Remote, Florida, or Other."""
-    if pd.isna(location):
-        return 'Other'
+def is_broad_location(location: str) -> bool:
+    """Check if location is a broad/generic term."""
+    if not location:
+        return False
     loc_lower = location.lower()
-    if 'remote' in loc_lower:
-        return 'Remote'
-    elif 'fl' in loc_lower or 'florida' in loc_lower:
-        return 'Florida'
-    return 'Other'
+    return any(broad in loc_lower for broad in BROAD_LOCATIONS)
+
+
+def get_state_from_location(location: str) -> str:
+    """Extract state abbreviation from location string."""
+    if not location:
+        return ""
+    # Common patterns: "City, FL" or "City, Florida"
+    loc_lower = location.lower()
+    if ", fl" in loc_lower or "florida" in loc_lower:
+        return "florida"
+    return ""
+
+
+def filter_by_location(df: pd.DataFrame, selected_locations: list) -> pd.DataFrame:
+    """
+    Filter dataframe by selected locations.
+    CRITICAL: Also include broad listings (Remote, USA, etc.) when specific cities selected.
+    """
+    if not selected_locations:
+        return df
+
+    def location_matches(row_location):
+        if pd.isna(row_location):
+            return False
+
+        row_loc_lower = str(row_location).lower()
+
+        # Always include broad locations
+        if is_broad_location(row_location):
+            return True
+
+        # Check if row location matches any selected location
+        for sel_loc in selected_locations:
+            sel_loc_lower = sel_loc.lower()
+
+            # Direct match
+            if sel_loc_lower in row_loc_lower:
+                return True
+
+            # If user selected a Florida city, also include "Florida" listings
+            sel_state = get_state_from_location(sel_loc)
+            row_state = get_state_from_location(row_location)
+            if sel_state and sel_state == row_state:
+                return True
+
+        return False
+
+    return df[df['location'].apply(location_matches)]
 
 
 def main():
     # Header
-    st.title("Training Manager Jobs Dashboard")
+    st.title("L&D Job Board")
     st.markdown("*Find your next Learning & Development opportunity*")
     st.divider()
 
     # Load data
-    df = load_data()
+    df = load_jobs()
 
-    if df is None or df.empty:
-        st.error("No data found! Please run `scrape_training.py` first to generate job leads.")
-        st.code('"C:\\Training Manager Jobs\\venv\\Scripts\\python.exe" "C:\\Training Manager Jobs\\scrape_training.py"')
+    if df.empty:
+        st.warning("No jobs in database yet. The scraper will populate jobs automatically, or you can trigger it manually in Render.")
+        st.info("Once jobs are loaded, you'll see filters and job listings here.")
         return
 
-    # Add location category for metrics
-    df['location_category'] = df['location'].apply(categorize_location)
-
     # ============== SIDEBAR FILTERS ==============
-    st.sidebar.header("🔍 Filters")
+    st.sidebar.header("Filters")
+
+    # Level filter
+    selected_levels = st.sidebar.multiselect(
+        "Job Level",
+        options=LEVELS,
+        default=[],
+        placeholder="All levels"
+    )
+
+    # Category filter
+    selected_categories = st.sidebar.multiselect(
+        "Category",
+        options=CATEGORIES,
+        default=[],
+        placeholder="All categories"
+    )
 
     # Location filter
-    unique_locations = sorted(df['location'].unique().tolist())
+    unique_locations = sorted(df['location'].dropna().unique().tolist())
     selected_locations = st.sidebar.multiselect(
-        "📍 Location",
+        "Location",
         options=unique_locations,
         default=[],
-        placeholder="All locations"
+        placeholder="All locations",
+        help="Selecting a city also shows Remote/USA/nationwide listings"
     )
 
     # Search filter
     search_query = st.sidebar.text_input(
-        "🔎 Search Title/Company",
-        placeholder="e.g., Training Manager, Zillow"
+        "Search Title/Company",
+        placeholder="e.g., Training Manager"
     )
-
-    # Score slider
-    min_score = st.sidebar.slider(
-        "⭐ Minimum Match Score",
-        min_value=0,
-        max_value=100,
-        value=0,
-        step=10,
-        help="Filter by relevance score (higher = better match)"
-    )
-
-    st.sidebar.divider()
-    st.sidebar.markdown("### About Match Scores")
-    st.sidebar.markdown("""
-    - **80-100**: Excellent match
-    - **60-79**: Good match
-    - **40-59**: Moderate match
-    - **0-39**: Weak match
-    """)
 
     # ============== APPLY FILTERS ==============
     filtered_df = df.copy()
 
-    # Location filter
+    # Level filter
+    if selected_levels:
+        filtered_df = filtered_df[filtered_df['level'].isin(selected_levels)]
+
+    # Category filter
+    if selected_categories:
+        filtered_df = filtered_df[filtered_df['category'].isin(selected_categories)]
+
+    # Location filter (with smart broad location logic)
     if selected_locations:
-        filtered_df = filtered_df[filtered_df['location'].isin(selected_locations)]
+        filtered_df = filter_by_location(filtered_df, selected_locations)
 
     # Search filter
     if search_query:
@@ -145,39 +189,37 @@ def main():
         )
         filtered_df = filtered_df[mask]
 
-    # Score filter
-    filtered_df = filtered_df[filtered_df['match_score'] >= min_score]
-
     # ============== METRICS HEADER ==============
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         st.metric(
-            label="📊 Total Jobs",
-            value=len(filtered_df),
-            delta=f"of {len(df)} total" if len(filtered_df) != len(df) else None
+            label="Total Jobs",
+            value=len(filtered_df)
         )
 
     with col2:
-        remote_count = len(filtered_df[filtered_df['location_category'] == 'Remote'])
-        st.metric(
-            label="🏠 Remote Roles",
-            value=remote_count
-        )
+        # Count jobs added today
+        today = date.today()
+        if 'created_at' in filtered_df.columns:
+            new_today = filtered_df[
+                filtered_df['created_at'].apply(
+                    lambda x: x.date() == today if pd.notna(x) else False
+                )
+            ]
+            st.metric(label="New Today", value=len(new_today))
+        else:
+            st.metric(label="New Today", value=0)
 
     with col3:
-        florida_count = len(filtered_df[filtered_df['location_category'] == 'Florida'])
-        st.metric(
-            label="🌴 Florida Roles",
-            value=florida_count
-        )
+        mgmt_count = len(filtered_df[filtered_df['level'] == "Management+"])
+        st.metric(label="Management+", value=mgmt_count)
 
     with col4:
-        avg_score = filtered_df['match_score'].mean() if len(filtered_df) > 0 else 0
-        st.metric(
-            label="⭐ Avg Match Score",
-            value=f"{avg_score:.0f}"
-        )
+        remote_count = len(filtered_df[
+            filtered_df['location'].str.lower().str.contains('remote', na=False)
+        ])
+        st.metric(label="Remote", value=remote_count)
 
     st.divider()
 
@@ -187,9 +229,8 @@ def main():
         return
 
     # Prepare display dataframe
-    display_columns = ['title', 'company', 'location', 'match_score', 'job_url']
+    display_columns = ['title', 'company', 'location', 'level', 'category', 'job_url']
     available_columns = [col for col in display_columns if col in filtered_df.columns]
-
     display_df = filtered_df[available_columns].copy()
 
     # Rename columns for display
@@ -197,43 +238,29 @@ def main():
         'title': 'Job Title',
         'company': 'Company',
         'location': 'Location',
-        'match_score': 'Match Score',
+        'level': 'Level',
+        'category': 'Category',
         'job_url': 'Apply'
     }
     display_df = display_df.rename(columns=column_labels)
 
-    # Sort by match score descending
-    display_df = display_df.sort_values('Match Score', ascending=False).reset_index(drop=True)
+    # Sort by created_at (newest first) if available
+    if 'created_at' in filtered_df.columns:
+        display_df = display_df.iloc[filtered_df['created_at'].argsort()[::-1]]
+
+    display_df = display_df.reset_index(drop=True)
 
     # Configure column display
     column_config = {
-        "Job Title": st.column_config.TextColumn(
-            "Job Title",
-            width="large"
-        ),
-        "Company": st.column_config.TextColumn(
-            "Company",
-            width="medium"
-        ),
-        "Location": st.column_config.TextColumn(
-            "Location",
-            width="medium"
-        ),
-        "Match Score": st.column_config.ProgressColumn(
-            "Match Score",
-            help="Relevance score based on title keywords",
-            format="%d",
-            min_value=0,
-            max_value=100,
-        ),
-        "Apply": st.column_config.LinkColumn(
-            "Apply",
-            display_text="Apply Now 🚀",
-            width="small"
-        )
+        "Job Title": st.column_config.TextColumn("Job Title", width="large"),
+        "Company": st.column_config.TextColumn("Company", width="medium"),
+        "Location": st.column_config.TextColumn("Location", width="medium"),
+        "Level": st.column_config.TextColumn("Level", width="small"),
+        "Category": st.column_config.TextColumn("Category", width="medium"),
+        "Apply": st.column_config.LinkColumn("Apply", display_text="Apply 🚀", width="small")
     }
 
-    st.subheader(f"📋 Job Listings ({len(display_df)} results)")
+    st.subheader(f"Job Listings ({len(display_df)} results)")
 
     st.dataframe(
         display_df,
@@ -243,44 +270,32 @@ def main():
         height=500
     )
 
-    # ============== EXPANDER: RAW DATA & LOGS ==============
-    with st.expander("📁 View Raw Data & Details"):
-        st.markdown("### Full Dataset Preview")
-
-        # Show all columns
-        all_columns = filtered_df.columns.tolist()
-        selected_cols = st.multiselect(
-            "Select columns to display:",
-            options=all_columns,
-            default=['title', 'company', 'location', 'date_posted', 'job_type', 'match_score']
-        )
-
-        if selected_cols:
-            st.dataframe(
-                filtered_df[selected_cols],
-                use_container_width=True,
-                hide_index=True
-            )
-
-        st.markdown("### Data Statistics")
+    # ============== EXPANDER: STATS ==============
+    with st.expander("View Statistics"):
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown("**Top Companies:**")
-            company_counts = filtered_df['company'].value_counts().head(10)
-            st.dataframe(company_counts, use_container_width=True)
+            st.markdown("**Jobs by Category:**")
+            if 'category' in filtered_df.columns:
+                cat_counts = filtered_df['category'].value_counts()
+                st.dataframe(cat_counts, use_container_width=True)
 
         with col2:
-            st.markdown("**Location Distribution:**")
-            location_counts = filtered_df['location_category'].value_counts()
-            st.dataframe(location_counts, use_container_width=True)
+            st.markdown("**Jobs by Level:**")
+            if 'level' in filtered_df.columns:
+                level_counts = filtered_df['level'].value_counts()
+                st.dataframe(level_counts, use_container_width=True)
 
-        st.markdown("### Export Options")
+        st.markdown("**Top Companies:**")
+        company_counts = filtered_df['company'].value_counts().head(10)
+        st.dataframe(company_counts, use_container_width=True)
+
+        # Export option
         csv_data = filtered_df.to_csv(index=False)
         st.download_button(
-            label="📥 Download Filtered Results (CSV)",
+            label="Download Filtered Results (CSV)",
             data=csv_data,
-            file_name="filtered_training_jobs.csv",
+            file_name="ld_jobs_export.csv",
             mime="text/csv"
         )
 

@@ -1,4 +1,5 @@
 services:
+  # Web Service - Streamlit Dashboard
   - type: web
     name: training-manager-jobs
     runtime: python
@@ -7,3 +8,28 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.0"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: training-jobs-db
+          property: connectionString
+
+  # Cron Job - Daily Scraper
+  - type: cron
+    name: job-scraper
+    runtime: python
+    schedule: "0 8 * * *"  # Daily at 8 AM UTC (3 AM EST)
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scraper.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: training-jobs-db
+          property: connectionString
+
+# PostgreSQL Database
+databases:
+  - name: training-jobs-db
+    plan: free
+    databaseName: ld_jobs
