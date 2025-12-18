@@ -221,7 +221,7 @@ def scrape_and_store():
 
                 try:
                     jobs_df = scrape_jobs(
-                        site_name=["indeed", "linkedin"],
+                        site_name=["indeed", "linkedin", "zip_recruiter"],
                         search_term=search_term,
                         location=location,
                         hours_old=HOURS_OLD,
