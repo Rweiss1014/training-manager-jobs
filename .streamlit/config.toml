@@ -1,6 +1,7 @@
 [client]
 showSidebarNavigation = true
-toolbarMode = "minimal"
+toolbarMode = "viewer"
+showErrorDetails = false
 
 [browser]
 gatherUsageStats = false
