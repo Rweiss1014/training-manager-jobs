@@ -4,7 +4,7 @@ Scrapes job listings and stores them in PostgreSQL.
 """
 
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from jobspy import scrape_jobs
 import pandas as pd
@@ -328,7 +328,7 @@ def scrape_and_store():
                             job_url=str(job_url)[:2000],
                             description=str(description) if description else None,
                             level=get_level(title),
-                            created_at=datetime.utcnow()
+                            created_at=datetime.now(timezone.utc)
                         )
 
                         session.add(job)
