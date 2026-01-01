@@ -50,10 +50,10 @@
 5. Updated render.yaml to use gunicorn instead of streamlit
 
 ## Where We Left Off
-- Flask app pushed to GitHub (commit 9a6a118)
-- Render should auto-deploy the new Flask version
-- User should check https://training-manager-jobs.onrender.com/ after rebuild completes
-- Local testing available at http://127.0.0.1:5000
+- Flask app deployed successfully to Render
+- **Site is LIVE**: https://training-manager-jobs.onrender.com/
+- User wants to make UI changes next session (design doesn't match L&D Exchange screenshots closely enough)
+- Note: Had to manually update Render start command in dashboard (render.yaml changes don't auto-apply after initial setup)
 
 ## TODO / Future Improvements
 - [ ] Fine-tune CSS to more closely match L&D Exchange screenshots (user said design doesn't look exactly like the reference)
