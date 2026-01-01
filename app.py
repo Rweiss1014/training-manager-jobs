@@ -11,11 +11,194 @@ from database import get_session, Job
 
 # Page configuration - MUST be first Streamlit command
 st.set_page_config(
-    page_title="L&D Job Board",
-    page_icon="📋",
+    page_title="L&D Exchange - Job Board",
+    page_icon="💼",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
+
+# Custom CSS for landing page styling
+st.markdown("""
+<style>
+    /* Hide default Streamlit elements for cleaner look */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+
+    /* Main container styling */
+    .main .block-container {
+        padding-top: 2rem;
+        max-width: 1200px;
+    }
+
+    /* Stats section */
+    .stat-card {
+        text-align: center;
+        padding: 1rem;
+    }
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #0066FF;
+        margin-bottom: 0;
+    }
+    .stat-number.green { color: #00C853; }
+    .stat-number.purple { color: #7C4DFF; }
+    .stat-number.orange { color: #FF6D00; }
+    .stat-label {
+        font-size: 0.9rem;
+        color: #666;
+        margin-top: 0;
+    }
+
+    /* Specialty cards */
+    .specialty-card {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-left: 4px solid #0066FF;
+        border-radius: 8px;
+        padding: 1rem 1.2rem;
+        margin-bottom: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .specialty-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    .specialty-card.purple { border-left-color: #7C4DFF; }
+    .specialty-card.green { border-left-color: #00C853; }
+    .specialty-card.orange { border-left-color: #FF6D00; }
+    .specialty-card.pink { border-left-color: #E91E63; }
+    .specialty-card.teal { border-left-color: #00BCD4; }
+    .specialty-title {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.3rem;
+    }
+    .specialty-count {
+        font-size: 0.85rem;
+        color: #888;
+    }
+
+    /* Section headers */
+    .section-header {
+        text-align: center;
+        margin: 3rem 0 2rem 0;
+    }
+    .section-header h2 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #222;
+        margin-bottom: 0.5rem;
+    }
+    .section-header p {
+        color: #666;
+        font-size: 1rem;
+    }
+
+    /* Value prop cards */
+    .value-card {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 2rem;
+        height: 100%;
+    }
+    .value-card h3 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #222;
+        margin-bottom: 1.5rem;
+    }
+    .value-card ul {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 1.5rem 0;
+    }
+    .value-card li {
+        padding: 0.5rem 0;
+        color: #555;
+        display: flex;
+        align-items: center;
+    }
+    .value-card li::before {
+        content: "•";
+        color: #0066FF;
+        font-weight: bold;
+        margin-right: 0.75rem;
+    }
+
+    /* Buttons */
+    .btn-primary {
+        background: linear-gradient(135deg, #FF6B35 0%, #F7931A 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        text-align: center;
+        display: block;
+        text-decoration: none;
+    }
+    .btn-secondary {
+        background: white;
+        color: #333;
+        border: 1px solid #ddd;
+        padding: 0.75rem 2rem;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        text-align: center;
+        display: block;
+        text-decoration: none;
+    }
+
+    /* Footer */
+    .footer {
+        background: #f8f9fa;
+        padding: 3rem 0 2rem 0;
+        margin-top: 4rem;
+        border-top: 1px solid #e0e0e0;
+    }
+    .footer-col h4 {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 1rem;
+    }
+    .footer-col p, .footer-col a {
+        font-size: 0.85rem;
+        color: #666;
+        text-decoration: none;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+    .footer-col a:hover {
+        color: #0066FF;
+    }
+    .footer-copyright {
+        text-align: center;
+        color: #999;
+        font-size: 0.8rem;
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e0e0e0;
+    }
+
+    /* Navigation style */
+    .nav-button {
+        background: #0066FF;
+        color: white !important;
+        padding: 0.5rem 1.5rem;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 500;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # Constants
 LEVELS = ["Management+", "Individual Contributor"]
@@ -109,18 +292,202 @@ def filter_by_location(df: pd.DataFrame, selected_locations: list) -> pd.DataFra
     return df[df['location'].apply(location_matches)]
 
 
-def main():
-    # Header
-    st.title("L&D Job Board")
-    st.markdown("*Find your next Learning & Development opportunity*")
+def count_jobs_by_specialty(df: pd.DataFrame) -> dict:
+    """Count jobs by L&D specialty based on title keywords."""
+    specialties = {
+        "Instructional Design": ["instructional design", "id ", "curriculum design"],
+        "E-Learning Development": ["e-learning", "elearning", "digital learning", "online learning"],
+        "Training & Facilitation": ["training", "facilitator", "trainer", "facilitation"],
+        "Learning Management": ["learning management", "lms", "learning admin"],
+        "Curriculum Development": ["curriculum", "course design", "content develop"],
+        "Corporate Training": ["corporate training", "corporate learning", "workplace learning"],
+        "Learning Technology": ["learning tech", "edtech", "learning system", "learning platform"],
+        "Talent Development": ["talent develop", "talent management", "l&d manager", "learning director"]
+    }
+
+    counts = {}
+    for specialty, keywords in specialties.items():
+        count = 0
+        for _, row in df.iterrows():
+            title = str(row.get('title', '')).lower()
+            desc = str(row.get('description', '')).lower() if row.get('description') else ''
+            if any(kw in title or kw in desc for kw in keywords):
+                count += 1
+        counts[specialty] = count
+    return counts
+
+
+def render_landing_page(df: pd.DataFrame):
+    """Render the landing page with stats and specialty cards."""
+
+    # Calculate stats
+    total_jobs = len(df)
+    companies = df['company'].nunique() if not df.empty else 0
+    remote_jobs = len(df[df['location'].str.lower().str.contains('remote', na=False)]) if not df.empty else 0
+
+    # ============== STATS ROW ==============
+    st.markdown("<br>", unsafe_allow_html=True)
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.markdown(f"""
+        <div class="stat-card">
+            <p class="stat-number">{total_jobs}+</p>
+            <p class="stat-label">Active Jobs</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown(f"""
+        <div class="stat-card">
+            <p class="stat-number green">{companies}+</p>
+            <p class="stat-label">Companies Hiring</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown(f"""
+        <div class="stat-card">
+            <p class="stat-number purple">{remote_jobs}+</p>
+            <p class="stat-label">Remote Positions</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col4:
+        st.markdown("""
+        <div class="stat-card">
+            <p class="stat-number orange">100%</p>
+            <p class="stat-label">L&D Focused</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ============== BROWSE BY SPECIALTY ==============
+    st.markdown("""
+    <div class="section-header">
+        <h2>Browse by L&D Specialty</h2>
+        <p>Find opportunities across all areas of Learning & Development</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Get specialty counts
+    specialty_counts = count_jobs_by_specialty(df)
+
+    # Specialty cards in 4 columns
+    specialties_config = [
+        ("Instructional Design", "blue", specialty_counts.get("Instructional Design", 0)),
+        ("E-Learning Development", "purple", specialty_counts.get("E-Learning Development", 0)),
+        ("Training & Facilitation", "green", specialty_counts.get("Training & Facilitation", 0)),
+        ("Learning Management", "orange", specialty_counts.get("Learning Management", 0)),
+        ("Curriculum Development", "teal", specialty_counts.get("Curriculum Development", 0)),
+        ("Corporate Training", "pink", specialty_counts.get("Corporate Training", 0)),
+        ("Learning Technology", "blue", specialty_counts.get("Learning Technology", 0)),
+        ("Talent Development", "purple", specialty_counts.get("Talent Development", 0)),
+    ]
+
+    # First row of 4
+    cols = st.columns(4)
+    for i, (name, color, count) in enumerate(specialties_config[:4]):
+        with cols[i]:
+            st.markdown(f"""
+            <div class="specialty-card {color}">
+                <div class="specialty-title">{name}</div>
+                <div class="specialty-count">{count} jobs</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    # Second row of 4
+    cols = st.columns(4)
+    for i, (name, color, count) in enumerate(specialties_config[4:]):
+        with cols[i]:
+            st.markdown(f"""
+            <div class="specialty-card {color}">
+                <div class="specialty-title">{name}</div>
+                <div class="specialty-count">{count} jobs</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    # ============== VALUE PROPOSITION CARDS ==============
+    st.markdown("<br><br>", unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2, gap="large")
+
+    with col1:
+        st.markdown("""
+        <div class="value-card">
+            <h3>For L&D Professionals</h3>
+            <ul>
+                <li>Access curated jobs from top L&D job boards</li>
+                <li>Filter by specialty, location, and level</li>
+                <li>Get discovered by employers seeking L&D talent</li>
+                <li>Updated daily with fresh opportunities</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Browse All Jobs", type="primary", use_container_width=True):
+            st.session_state.page = "jobs"
+            st.rerun()
+
+    with col2:
+        st.markdown("""
+        <div class="value-card">
+            <h3>For Employers & Agencies</h3>
+            <ul>
+                <li>Browse verified L&D professionals</li>
+                <li>Post job listings to reach L&D talent</li>
+                <li>Filter by skills, experience, and availability</li>
+                <li>Connect directly with specialized L&D talent</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("View Job Listings", type="secondary", use_container_width=True):
+            st.session_state.page = "jobs"
+            st.rerun()
+
+    # ============== FOOTER ==============
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
     st.divider()
 
-    # Load data
-    df = load_jobs()
+    footer_cols = st.columns(4)
+
+    with footer_cols[0]:
+        st.markdown("**L&D Exchange**")
+        st.caption("The L&D Industry's Premier Job Board & Talent Network")
+
+    with footer_cols[1]:
+        st.markdown("**For Job Seekers**")
+        st.caption("Browse Jobs")
+        st.caption("Job Directory")
+        st.caption("Job Alerts")
+
+    with footer_cols[2]:
+        st.markdown("**For Employers**")
+        st.caption("Post a Job")
+        st.caption("Browse Talent")
+        st.caption("Pricing")
+
+    with footer_cols[3]:
+        st.markdown("**Resources**")
+        st.caption("Blog")
+        st.caption("About Us")
+        st.caption("Contact")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.caption("© 2024 L&D Exchange. All rights reserved.")
+
+
+def render_jobs_page(df: pd.DataFrame):
+    """Render the job listings page with filters."""
+
+    # Back to home button
+    if st.button("← Back to Home"):
+        st.session_state.page = "home"
+        st.rerun()
+
+    st.title("Job Listings")
+    st.divider()
 
     if df.empty:
-        st.warning("No jobs in database yet. The scraper will populate jobs automatically, or you can trigger it manually in Render.")
-        st.info("Once jobs are loaded, you'll see filters and job listings here.")
+        st.warning("No jobs in database yet. The scraper will populate jobs automatically.")
         return
 
     # ============== SIDEBAR FILTERS ==============
@@ -238,7 +605,7 @@ def main():
         "Salary": st.column_config.TextColumn("Salary", width="small"),
         "Location": st.column_config.TextColumn("Location", width="medium"),
         "Level": st.column_config.TextColumn("Level", width="small"),
-        "Apply": st.column_config.LinkColumn("Apply", display_text="Apply 🚀", width="small")
+        "Apply": st.column_config.LinkColumn("Apply", display_text="Apply →", width="small")
     }
 
     st.subheader(f"Job Listings ({len(display_df)} results)")
@@ -281,6 +648,21 @@ def main():
             file_name="ld_jobs_export.csv",
             mime="text/csv"
         )
+
+
+def main():
+    # Initialize session state for page navigation
+    if 'page' not in st.session_state:
+        st.session_state.page = "home"
+
+    # Load data
+    df = load_jobs()
+
+    # Render appropriate page
+    if st.session_state.page == "home":
+        render_landing_page(df)
+    else:
+        render_jobs_page(df)
 
 
 if __name__ == "__main__":

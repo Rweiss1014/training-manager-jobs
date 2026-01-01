@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Browse Jobs - L&D Exchange{% endblock %}
+
+{% block content %}
+<section class="jobs-hero">
+    <div class="container">
+        <h1>Browse L&D Jobs</h1>
+        <p>{{ jobs|length }} opportunities in Learning & Development</p>
+    </div>
+</section>
+
+<section class="jobs-section">
+    <div class="container">
+        <div class="jobs-layout">
+            <!-- Filters Sidebar -->
+            <aside class="filters-sidebar">
+                <form method="GET" action="/jobs" class="filters-form">
+                    <h3>Filters</h3>
+
+                    <div class="filter-group">
+                        <label for="search">Search</label>
+                        <input type="text" id="search" name="search"
+                               placeholder="Job title or company"
+                               value="{{ filters.search }}">
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="level">Job Level</label>
+                        <select id="level" name="level">
+                            <option value="">All Levels</option>
+                            <option value="Management+" {% if filters.level == 'Management+' %}selected{% endif %}>Management+</option>
+                            <option value="Individual Contributor" {% if filters.level == 'Individual Contributor' %}selected{% endif %}>Individual Contributor</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="location">Location</label>
+                        <select id="location" name="location">
+                            <option value="">All Locations</option>
+                            {% for loc in locations %}
+                            <option value="{{ loc }}" {% if filters.location == loc %}selected{% endif %}>{{ loc }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                    <a href="/jobs" class="btn btn-secondary">Clear All</a>
+                </form>
+
+                <!-- Stats Card -->
+                <div class="stats-card">
+                    <h4>Quick Stats</h4>
+                    <div class="stat-row">
+                        <span>Total Jobs</span>
+                        <strong>{{ stats.total_jobs }}</strong>
+                    </div>
+                    <div class="stat-row">
+                        <span>New Today</span>
+                        <strong>{{ stats.new_today }}</strong>
+                    </div>
+                    <div class="stat-row">
+                        <span>Remote</span>
+                        <strong>{{ stats.remote_jobs }}</strong>
+                    </div>
+                    <div class="stat-row">
+                        <span>Companies</span>
+                        <strong>{{ stats.companies }}</strong>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Jobs List -->
+            <div class="jobs-list">
+                {% if jobs %}
+                    {% for job in jobs %}
+                    <div class="job-card">
+                        <div class="job-header">
+                            <div class="job-title-area">
+                                <h3 class="job-title">{{ job.title }}</h3>
+                                <span class="job-company">{{ job.company }}</span>
+                            </div>
+                            <span class="job-level {{ 'management' if job.level == 'Management+' else 'ic' }}">
+                                {{ job.level }}
+                            </span>
+                        </div>
+                        <div class="job-details">
+                            <span class="job-location">{{ job.location or 'Location not specified' }}</span>
+                            {% if job.salary %}
+                            <span class="job-salary">{{ job.salary }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="job-actions">
+                            <a href="{{ job.job_url }}" target="_blank" class="btn btn-primary btn-sm">Apply Now</a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-jobs">
+                        <h3>No jobs found</h3>
+                        <p>Try adjusting your filters or search terms.</p>
+                        <a href="/jobs" class="btn btn-secondary">Clear Filters</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

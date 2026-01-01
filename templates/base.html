@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}L&D Exchange - Job Board{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="/" class="logo">
+                <span class="logo-icon">L&D</span>
+                <span class="logo-text">Exchange</span>
+            </a>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/jobs">Browse Jobs</a>
+                <a href="/jobs" class="btn btn-primary">Find Jobs</a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <div class="footer-logo">
+                        <span class="logo-icon">L&D</span>
+                        <span class="logo-text">Exchange</span>
+                    </div>
+                    <p class="footer-tagline">The L&D Industry's Premier Job Board & Talent Network</p>
+                </div>
+                <div class="footer-col">
+                    <h4>For Job Seekers</h4>
+                    <a href="/jobs">Browse Jobs</a>
+                    <a href="/jobs">Job Directory</a>
+                    <a href="/jobs">Job Alerts</a>
+                </div>
+                <div class="footer-col">
+                    <h4>For Employers</h4>
+                    <a href="#">Post a Job</a>
+                    <a href="#">Browse Talent</a>
+                    <a href="#">Pricing</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Resources</h4>
+                    <a href="#">Blog</a>
+                    <a href="#">About Us</a>
+                    <a href="#">Contact</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 L&D Exchange. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

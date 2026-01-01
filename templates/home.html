@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Stats Section -->
+<section class="stats-section">
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-number blue">{{ stats.total_jobs }}+</span>
+                <span class="stat-label">Active Jobs</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number green">{{ stats.companies }}+</span>
+                <span class="stat-label">Companies Hiring</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number purple">{{ stats.remote_jobs }}+</span>
+                <span class="stat-label">Remote Positions</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number orange">100%</span>
+                <span class="stat-label">L&D Focused</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Browse by Specialty -->
+<section class="specialty-section">
+    <div class="container">
+        <div class="section-header">
+            <h2>Browse by L&D Specialty</h2>
+            <p>Find opportunities across all areas of Learning & Development</p>
+        </div>
+        <div class="specialty-grid">
+            {% for specialty in specialties %}
+            <a href="/jobs?search={{ specialty.name }}" class="specialty-card {{ specialty.color }}">
+                <span class="specialty-title">{{ specialty.name }}</span>
+                <span class="specialty-count">{{ specialty.count }} jobs</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Value Proposition -->
+<section class="value-section">
+    <div class="container">
+        <div class="value-grid">
+            <div class="value-card">
+                <h3>For L&D Professionals</h3>
+                <ul>
+                    <li>Access curated jobs from top L&D job boards</li>
+                    <li>Filter by specialty, location, and level</li>
+                    <li>Get discovered by employers seeking L&D talent</li>
+                    <li>Updated daily with fresh opportunities</li>
+                </ul>
+                <a href="/jobs" class="btn btn-primary">Browse All Jobs</a>
+            </div>
+            <div class="value-card">
+                <h3>For Employers & Agencies</h3>
+                <ul>
+                    <li>Browse verified L&D professionals</li>
+                    <li>Post job listings to reach L&D talent</li>
+                    <li>Filter by skills, experience, and availability</li>
+                    <li>Connect directly with specialized L&D talent</li>
+                </ul>
+                <a href="/jobs" class="btn btn-secondary">Browse L&D Talent</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

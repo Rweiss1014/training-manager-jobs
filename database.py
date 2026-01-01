@@ -17,8 +17,12 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+# Fall back to SQLite for local development
+if not DATABASE_URL:
+    DATABASE_URL = "sqlite:///jobs.db"
+
 # Create engine and session factory
-engine = create_engine(DATABASE_URL) if DATABASE_URL else None
+engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine) if engine else None
 
 # Base class for models
